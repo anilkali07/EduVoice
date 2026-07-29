@@ -6,12 +6,13 @@ import { getFirestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 export const firebaseConfig = {
-    apiKey: "AIzaSyDpZi5cIGVj-WdLKn9di0itO7Rbp6y6Ido",
-    authDomain: "edu-voice-e3c7c.firebaseapp.com",
-    projectId: "edu-voice-e3c7c",
-    storageBucket: "edu-voice-e3c7c.firebasestorage.app",
-    messagingSenderId: "339930556390",
-    appId: "1:339930556390:web:50e58e2a45ee9399b41827"
+    apiKey: "AIzaSyB7gjZwqSUamP2ZQcUt0GA63w7OSU_1PnU",
+    authDomain: "eduvoice-a653a.firebaseapp.com",
+    projectId: "eduvoice-a653a",
+    storageBucket: "eduvoice-a653a.firebasestorage.app",
+    messagingSenderId: "1091779646636",
+    appId: "1:1091779646636:web:5586024b63f1694e697b09",
+    measurementId: "G-ZD3VF748TK"
 };
 
 // Initialize Firebase
