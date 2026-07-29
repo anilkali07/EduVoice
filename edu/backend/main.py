@@ -244,20 +244,25 @@ async def simplify_word_endpoint(req: SimplificationRequest):
             Word: "{req.word}"
             Context: "{req.context}"
             
-            Provide a JSON response with:
-            - simple: A simpler synonym/phrase (max 3 words)
-            - explanation: A clear, easy explanation (max 1 sentence)
-            - example: A short example sentence using the SIMPLER word.
+            Provide a strict JSON response containing exactly these keys:
+            {{
+              "simple": "A simpler synonym or phrase (max 3 words)",
+              "explanation": "A clear, easy explanation suitable for a child (max 1 sentence)",
+              "example": "A short example sentence using the simpler word"
+            }}
+            Do not include any text other than the JSON object.
             """
             
             response = client.chat.completions.create(
                 model=gen_model,
                 messages=[
-                    {"role": "system", "content": "You are a helpful reading assistant for children. Output strict JSON."},
+                    {"role": "system", "content": "You are a helpful reading assistant for children. You must output raw, valid JSON matching the requested schema. No conversational prefix or suffix."},
                     {"role": "user", "content": prompt}
                 ]
             )
-            content = response.choices[0].message.content
+            content = response.choices[0].message.content.strip()
+            print(f"Raw LLM Response: {content}")
+            
             # Clean possible markdown code blocks
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0]
@@ -265,10 +270,30 @@ async def simplify_word_endpoint(req: SimplificationRequest):
                  content = content.split("```")[1].split("```")[0]
                  
             data = json.loads(content.strip())
+            # Make keys case-insensitive
+            keys_lower = {k.lower(): v for k, v in data.items()}
+            
+            simple_val = (
+                keys_lower.get("simple") or 
+                keys_lower.get("simplified") or 
+                keys_lower.get("synonym") or 
+                keys_lower.get("easier") or 
+                "easier word"
+            )
+            
+            explanation_val = (
+                keys_lower.get("explanation") or 
+                keys_lower.get("definition") or 
+                keys_lower.get("meaning") or 
+                "A simpler meaning."
+            )
+            
+            example_val = keys_lower.get("example") or ""
+            
             return {
-                "simplified": data.get("simple", "easier word"),
-                "explanation": data.get("explanation", "A simpler meaning."),
-                "example": data.get("example", "")
+                "simplified": simple_val,
+                "explanation": explanation_val,
+                "example": example_val
             }
         except Exception as e:
             print(f"Simplification API Error: {e}")
