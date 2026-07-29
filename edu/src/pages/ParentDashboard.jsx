@@ -96,7 +96,8 @@ const ParentDashboard = () => {
   const handleGenerateAI = async () => {
     setIsGenerating(true);
     try {
-      const response = await fetch('http://localhost:8000/api/generate-paragraph', {
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${baseUrl}/api/generate-paragraph`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

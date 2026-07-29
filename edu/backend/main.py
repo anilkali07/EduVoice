@@ -41,7 +41,13 @@ app.add_middleware(
 # Initialize Firebase
 try:
     if not firebase_admin._apps:
-        cred = credentials.Certificate("serviceAccountKey.json")
+        firebase_creds_json = os.getenv("FIREBASE_SERVICE_ACCOUNT")
+        if firebase_creds_json:
+            import json
+            creds_dict = json.loads(firebase_creds_json)
+            cred = credentials.Certificate(creds_dict)
+        else:
+            cred = credentials.Certificate("serviceAccountKey.json")
         firebase_admin.initialize_app(cred)
     db = firestore.client()
     print("Firebase initialized successfully.")
@@ -55,7 +61,11 @@ class ParagraphRequest(BaseModel):
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "message": "EduVoice Backend is running"}
+    return {
+        "status": "ok",
+        "message": "EduVoice Backend is running",
+        "api_configured": client is not None
+    }
 
 @app.websocket("/ws/transcribe")
 async def websocket_endpoint(websocket: WebSocket):
