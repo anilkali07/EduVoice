@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { X, Volume2, BookOpen, Sparkles } from 'lucide-react';
 
-const AssistPopover = ({ data, onClose, onHearIt, isSpeaking }) => {
+const AssistPopover = ({ data, onClose, onHearIt, isSpeaking, onReplace }) => {
   const { word, simplification, type } = data;
 
   return (
@@ -80,7 +80,7 @@ const AssistPopover = ({ data, onClose, onHearIt, isSpeaking }) => {
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={() => onHearIt(simplification?.example || simplification?.simplified || word)}
             className={`btn flex-1 ${isSpeaking ? 'btn-secondary' : 'btn-primary'}`}
@@ -88,6 +88,13 @@ const AssistPopover = ({ data, onClose, onHearIt, isSpeaking }) => {
           >
             <Volume2 className={`h-5 w-5 mr-2 ${isSpeaking ? 'mic-pulse' : ''}`} />
             {isSpeaking ? 'Stop' : 'Hear It'}
+          </button>
+
+          <button
+            onClick={onReplace}
+            className="btn bg-purple-600 hover:bg-purple-700 text-white flex-1"
+          >
+            Simplify Text
           </button>
 
           <button

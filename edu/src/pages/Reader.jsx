@@ -42,7 +42,7 @@ const Reader = () => {
   const [assistData, setAssistData] = useState(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [wordStruggles, setWordStruggles] = useState({});
-  const [pendingReplacement, setPendingReplacement] = useState(null);
+  const pendingReplacementRef = useRef(null);
 
   // Refs
   const asrService = useRef(null);
@@ -230,18 +230,19 @@ const Reader = () => {
 
     // If they struggled 3 times, queue it for replacement when the pop-up closes
     if (newCount >= 3) {
-      setPendingReplacement({
+      pendingReplacementRef.current = {
         index: targetIndex,
         original: cleanWordLower,
         simplified: simpleData.simplified || cleanWord
-      });
+      };
     }
 
     setAssistData({
       word: cleanWord,
       simplification: simpleData,
       syllables: pronunData.syllables,
-      type: 'manual'
+      type: 'manual',
+      index: targetIndex
     });
     setShowAssistPopover(true);
     setAssistCount(c => c + 1);
@@ -338,23 +339,46 @@ const Reader = () => {
                 lastSpeechTimeRef.current = Date.now() + 1000;
 
                 // Handle automatic word replacement if struggle count reached 3
-                if (pendingReplacement) {
+                const pending = pendingReplacementRef.current;
+                if (pending) {
                   const updatedWords = [...words];
-                  const targetIndex = pendingReplacement.index;
+                  const targetIndex = pending.index;
                   if (updatedWords[targetIndex]) {
                     const originalWord = updatedWords[targetIndex];
                     const hasPunctuationEnd = /[.,!?]$/.test(originalWord);
                     const punctuation = hasPunctuationEnd ? originalWord.slice(-1) : "";
                     
-                    updatedWords[targetIndex] = pendingReplacement.simplified + punctuation;
+                    updatedWords[targetIndex] = pending.simplified + punctuation;
                     
                     setPassage(prev => ({
                       ...prev,
                       content: updatedWords.join(" ")
                     }));
                   }
-                  setPendingReplacement(null);
+                  pendingReplacementRef.current = null;
                 }
+              }}
+              onReplace={() => {
+                const targetIndex = assistData.index !== undefined ? assistData.index : matchedIndexRef.current;
+                const simplifiedWord = assistData.simplification?.simplified || assistData.word;
+                
+                const updatedWords = [...words];
+                if (updatedWords[targetIndex]) {
+                  const originalWord = updatedWords[targetIndex];
+                  const hasPunctuationEnd = /[.,!?]$/.test(originalWord);
+                  const punctuation = hasPunctuationEnd ? originalWord.slice(-1) : "";
+                  
+                  updatedWords[targetIndex] = simplifiedWord + punctuation;
+                  
+                  setPassage(prev => ({
+                    ...prev,
+                    content: updatedWords.join(" ")
+                  }));
+                }
+                
+                setShowAssistPopover(false);
+                lastSpeechTimeRef.current = Date.now() + 1000;
+                pendingReplacementRef.current = null;
               }}
               onHearIt={(text) => ttsService.current.speak(text)}
               isSpeaking={isSpeaking}
