@@ -41,6 +41,8 @@ const Reader = () => {
   const [currentStruggleWord, setCurrentStruggleWord] = useState(null);
   const [assistData, setAssistData] = useState(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [wordStruggles, setWordStruggles] = useState({});
+  const [pendingReplacement, setPendingReplacement] = useState(null);
 
   // Refs
   const asrService = useRef(null);
@@ -205,9 +207,10 @@ const Reader = () => {
     navigate('/dashboard');
   };
 
-  const requestHelp = async (word) => {
+  const requestHelp = async (word, index = null) => {
     if (!word) return;
     const cleanWord = word.replace(/[.,!?]/g, '');
+    const targetIndex = index !== null ? index : matchedIndexRef.current;
 
     // Track
     // Struggle is already tracked in handleStruggleResponse or direct click.
@@ -216,9 +219,23 @@ const Reader = () => {
       setStruggleWords(prev => [...prev, cleanWord.toLowerCase()]);
     }
 
+    // Increment struggle count for this word
+    const cleanWordLower = cleanWord.toLowerCase();
+    const newCount = (wordStruggles[cleanWordLower] || 0) + 1;
+    setWordStruggles(prev => ({ ...prev, [cleanWordLower]: newCount }));
+
     // Get complex simplification
     const simpleData = await simplificationService.current.simplifyWord(cleanWord, passage.content);
     const pronunData = await simplificationService.current.getPronunciationHelp(cleanWord);
+
+    // If they struggled 3 times, queue it for replacement when the pop-up closes
+    if (newCount >= 3) {
+      setPendingReplacement({
+        index: targetIndex,
+        original: cleanWordLower,
+        simplified: simpleData.simplified || cleanWord
+      });
+    }
 
     setAssistData({
       word: cleanWord,
@@ -230,8 +247,8 @@ const Reader = () => {
     setAssistCount(c => c + 1);
   };
 
-  const handleWordClick = (word) => {
-    requestHelp(word);
+  const handleWordClick = (word, index) => {
+    requestHelp(word, index);
   };
 
   // Styles
@@ -291,7 +308,7 @@ const Reader = () => {
 
             return (
               <span key={i}
-                onClick={() => handleWordClick(word)}
+                onClick={() => handleWordClick(word, i)}
                 className={`inline-block mr-3 mb-2 cursor-pointer hover:underline decoration-primary-300 underline-offset-4 ${statusClass}`}>
                 {word}
               </span>
@@ -319,6 +336,25 @@ const Reader = () => {
                 setShowAssistPopover(false);
                 // Smoothness: Give time after closing before checking silence again
                 lastSpeechTimeRef.current = Date.now() + 1000;
+
+                // Handle automatic word replacement if struggle count reached 3
+                if (pendingReplacement) {
+                  const updatedWords = [...words];
+                  const targetIndex = pendingReplacement.index;
+                  if (updatedWords[targetIndex]) {
+                    const originalWord = updatedWords[targetIndex];
+                    const hasPunctuationEnd = /[.,!?]$/.test(originalWord);
+                    const punctuation = hasPunctuationEnd ? originalWord.slice(-1) : "";
+                    
+                    updatedWords[targetIndex] = pendingReplacement.simplified + punctuation;
+                    
+                    setPassage(prev => ({
+                      ...prev,
+                      content: updatedWords.join(" ")
+                    }));
+                  }
+                  setPendingReplacement(null);
+                }
               }}
               onHearIt={(text) => ttsService.current.speak(text)}
               isSpeaking={isSpeaking}
