@@ -63,7 +63,33 @@ export class SimplificationService {
   async simplifyWord(word, context = '') {
     const lowerWord = word.toLowerCase().trim();
 
-    // Check cached/fast database first for instant results
+    // 1. Try querying the backend AI first
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${baseUrl}/api/simplify-word`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ word, context })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.simplified) {
+          return {
+            original: word,
+            simplified: data.simplified,
+            explanation: data.explanation,
+            example: data.example,
+            context,
+            confidence: 0.9
+          };
+        }
+      }
+    } catch (e) {
+      console.warn("Backend simplification failed, using local database/fallback:", e);
+    }
+
+    // 2. Fallback to cached local database for instant results if offline
     if (this.simplificationDatabase[lowerWord]) {
       return {
         original: word,
@@ -75,30 +101,7 @@ export class SimplificationService {
       };
     }
 
-    try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${baseUrl}/api/simplify-word`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ word, context })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        return {
-          original: word,
-          simplified: data.simplified,
-          explanation: data.explanation,
-          example: data.example,
-          context,
-          confidence: 0.9
-        };
-      }
-    } catch (e) {
-      console.warn("Backend simplification failed, using fallback:", e);
-    }
-
-    // Generate mock simplification for unknown words (Fallback)
+    // 3. Generate mock simplification for unknown words (Final Fallback)
     return this.generateMockSimplification(word, context);
   }
 

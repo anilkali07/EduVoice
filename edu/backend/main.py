@@ -239,7 +239,7 @@ async def simplify_word_endpoint(req: SimplificationRequest):
     # Try using Real AI
     if client:
         try:
-            gen_model = os.getenv("GENERATION_MODEL", "gpt-3.5-turbo")
+            gen_model = os.getenv("GENERATION_MODEL", "gpt-4o-mini")
             prompt = f"""For a dyslexic child reading assistant:
             Word: "{req.word}"
             Context: "{req.context}"
